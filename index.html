@@ -97,6 +97,7 @@ const LS=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return 
 const SS=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const today=()=>new Date().toLocaleDateString('en-CA');
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtD=s=>{const [y,m,d]=String(s||'').split('-');return MON[m-1]&&d?`${+d} ${MON[m-1]} ${y.slice(2)}`:(s||'')};
 
 function guessRepo(){
   if(!location.hostname.endsWith('github.io'))return '';
@@ -151,7 +152,9 @@ async function load(){
 }
 
 /* ---------- stats ---------- */
-const mins=e=>+e.durationMinutes||0;
+const hasDur=e=>e.durationMinutes!=null&&e.durationMinutes!=='';
+const mins=e=>hasDur(e)?(+e.durationMinutes||0):(metaOf(e.title).runtime||0);
+const isEst=e=>!hasDur(e)&&!!metaOf(e.title).runtime;
 const hrs=es=>es.reduce((a,e)=>a+mins(e),0)/60;
 const isEp=e=>e.type==='Series'&&e.episode!=null;
 const fmtH=h=>h.toFixed(h<10?1:0)+' h';
@@ -177,15 +180,16 @@ const se=e=>e.season!=null||e.episode!=null?`S${e.season??'?'}E${e.episode??'?'}
 
 /* ---------- metadata (poster, year, IMDb) cached per device ---------- */
 let enriching=false;
-const metaOf=t=>(LS('mt_meta',{}))[t.trim().toLowerCase()]||{};
+let META=LS('mt_meta',{});
+const metaOf=t=>META[t.trim().toLowerCase()]||{};
 const genresOf=t=>(metaOf(t).genre||'').split(',').map(s=>s.trim()).filter(Boolean);
 const TG={28:'Action',12:'Adventure',16:'Animation',35:'Comedy',80:'Crime',99:'Documentary',18:'Drama',10751:'Family',14:'Fantasy',36:'History',27:'Horror',10402:'Music',9648:'Mystery',10749:'Romance',878:'Sci-Fi',10770:'TV Movie',53:'Thriller',10752:'War',37:'Western',10759:'Action & Adventure',10762:'Kids',10763:'News',10764:'Reality',10765:'Sci-Fi & Fantasy',10766:'Soap',10767:'Talk',10768:'War & Politics'};
 async function enrich(){
   if(!cfg.tmdb||enriching)return;
   enriching=true;
-  const meta=LS('mt_meta',{});let n=0;
+  const meta=META;let n=0;
   for(const g of groups()){
-    if(meta[g.k]&&(meta[g.k].genre!==undefined||meta[g.k].miss))continue;
+    if(meta[g.k]&&((meta[g.k].genre!==undefined&&meta[g.k].runtime!==undefined)||meta[g.k].miss))continue;
     try{
       const r=await (await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${cfg.tmdb}&query=${encodeURIComponent(g.title)}`)).json();
       const res=(r.results||[]).filter(x=>x.media_type!=='person');
@@ -199,7 +203,12 @@ async function enrich(){
           if(o.imdbRating&&o.imdbRating!=='N/A')imdb=o.imdbRating;
           if(o.Genre&&o.Genre!=='N/A')genre=o.Genre}catch{}
       }
-      meta[g.k]={poster:h.poster_path?'https://image.tmdb.org/t/p/w185'+h.poster_path:null,year,imdb,genre};
+      let runtime=null;
+      try{
+        const d=await (await fetch(`https://api.themoviedb.org/3/${h.media_type==='movie'?'movie':'tv'}/${h.id}?api_key=${cfg.tmdb}`)).json();
+        runtime=h.media_type==='movie'?d.runtime:((d.episode_run_time||[])[0]||d.last_episode_to_air?.runtime);
+      }catch{}
+      meta[g.k]={poster:h.poster_path?'https://image.tmdb.org/t/p/w185'+h.poster_path:null,year,imdb,genre,runtime:runtime||0};
       if(++n%4===0){SS('mt_meta',meta);render()}
     }catch{break}
   }
@@ -246,7 +255,7 @@ function dash(){
   return `
   <div class="row">
     <select onchange="state.mode=this.value;render()"><option value="month" ${state.mode==='month'?'selected':''}>Monthly</option><option value="year" ${state.mode==='year'?'selected':''}>Yearly</option></select>
-    <select onchange="state.p=this.value;render()">${periods.map(p=>`<option ${p===state.p?'selected':''}>${p}</option>`).join('')}</select>
+    <select onchange="state.p=this.value;render()">${periods.map(p=>`<option value="${p}" ${p===state.p?'selected':''}>${p.length===7?MON[+p.slice(5)-1]+' '+p.slice(0,4):p}</option>`).join('')}</select>
     <span class="mut">All time: ${fmtH(hrs(all))} · ${all.filter(e=>e.type==='Movie').length} movies · ${all.filter(isEp).length} episodes</span>
   </div>
   <div class="cards">
@@ -262,7 +271,7 @@ function dash(){
   <div class="card">${genreHtml}</div>
   <div class="grid" style="margin-top:6px">
     <div><h2>Most watched</h2><div class="card">${top.length?top.map(([t,m])=>`<div class="row" style="justify-content:space-between;margin:3px 0"><span>${esc(t)}</span><span class="mut">${(m/60).toFixed(1)} h</span></div>`).join(''):'<span class="mut">Nothing logged.</span>'}</div></div>
-    <div><h2>Continue watching</h2><div class="card">${cont.length?cont.map(g=>`<div class="row" style="justify-content:space-between;margin:3px 0"><span>${esc(g.title)}</span><span class="mut">${se(g.last)} · ${g.last.dateWatched}</span></div>`).join(''):'<span class="mut">No series in progress.</span>'}</div></div>
+    <div><h2>Continue watching</h2><div class="card">${cont.length?cont.map(g=>`<div class="row" style="justify-content:space-between;margin:3px 0"><span>${esc(g.title)}</span><span class="mut">${se(g.last)} · ${fmtD(g.last.dateWatched)}</span></div>`).join(''):'<span class="mut">No series in progress.</span>'}</div></div>
   </div>`;
 }
 
@@ -283,7 +292,7 @@ function logView(){
     <span class="mut">${es.length} entries · ${fmtH(hrs(es))}</span>
   </div>
   <div class="wrap"><table><thead><tr><th></th>${th('Date','dateWatched')}${th('Title','title')}${th('Type','type')}<th>S/E</th>${th('Status','status')}${th('My','rating')}<th>IMDb</th><th>Genre</th>${th('Min','durationMinutes')}<th>Note</th>${canEdit?'<th></th>':''}</tr></thead><tbody>
-  ${es.map(e=>{const m=metaOf(e.title);return `<tr><td>${m.poster?`<img class="th" src="${m.poster}" alt="" loading="lazy">`:''}</td><td>${esc(e.dateWatched)}</td><td>${esc(e.title)}</td><td>${esc(e.type)}</td><td>${se(e)}</td><td><span class="tag ${esc(e.status)}">${esc(e.status)}</span></td><td>${e.rating??''}</td><td>${m.imdb||''}</td><td>${esc(m.genre)}</td><td>${e.durationMinutes??''}</td><td>${esc(e.note)}</td>${canEdit?`<td style="white-space:nowrap"><button class="btn sm" onclick="openForm('${esc(key(e).replace(/'/g,"\\'"))}')">Edit</button> <button class="btn sm del" onclick="del('${esc(key(e).replace(/'/g,"\\'"))}')">✕</button></td>`:''}</tr>`}).join('')}
+  ${es.map(e=>{const m=metaOf(e.title);return `<tr><td>${m.poster?`<img class="th" src="${m.poster}" alt="" loading="lazy">`:''}</td><td style="white-space:nowrap">${fmtD(e.dateWatched)}</td><td>${esc(e.title)}</td><td>${esc(e.type)}</td><td>${se(e)}</td><td><span class="tag ${esc(e.status)}">${esc(e.status)}</span></td><td>${e.rating??''}</td><td>${m.imdb||''}</td><td>${esc(m.genre)}</td><td>${isEst(e)?`<span class="mut" title="Runtime from TMDB">~${mins(e)}</span>`:(e.durationMinutes??'')}</td><td>${esc(e.note)}</td>${canEdit?`<td style="white-space:nowrap"><button class="btn sm" onclick="openForm('${esc(key(e).replace(/'/g,"\\'"))}')">Edit</button> <button class="btn sm del" onclick="del('${esc(key(e).replace(/'/g,"\\'"))}')">✕</button></td>`:''}</tr>`}).join('')}
   </tbody></table></div>`;
 }
 
@@ -299,10 +308,10 @@ function titlesView(){
         <h3>${esc(g.title)} ${m.year?`<span class="mut">(${m.year})</span>`:''}</h3>
         <div><span class="tag">${esc(g.type)}</span><span class="tag ${esc(g.status)}">${esc(g.status)}</span>${m.imdb?`<span class="tag">IMDb ${m.imdb}</span>`:''}</div>
         ${m.genre?`<div class="mut">${esc(m.genre)}</div>`:''}
-        <div class="mut">Last: ${g.last.dateWatched}${se(g.last)?' · '+se(g.last):''}${rew}</div>
+        <div class="mut">Last: ${fmtD(g.last.dateWatched)}${se(g.last)?' · '+se(g.last):''}${rew}</div>
         <div class="mut">${fmtH(g.hours)}${g.episodes?` · ${g.episodes} eps`:''}${g.avg!=null?` · my ${g.avg.toFixed(1)}/10`:''}</div>
         <details><summary>${g.list.length} entr${g.list.length>1?'ies':'y'}</summary>
-          ${g.list.map(e=>`<div class="mut">${e.dateWatched} ${se(e)} ${e.rating!=null?'★'+e.rating:''} ${esc(e.note)}</div>`).join('')}
+          ${g.list.map(e=>`<div class="mut">${fmtD(e.dateWatched)} ${se(e)} ${e.rating!=null?'★'+e.rating:''} ${esc(e.note)}</div>`).join('')}
         </details>
       </div></div>`}).join('')}</div>`;
 }
@@ -318,7 +327,7 @@ function settings(){
     ${f('omdb','OMDb API key (IMDb rating)',cfg.omdb,'password')}
   </div>
   <p class="mut">Saved only in this browser. Set them once on each device. Without a token the site reads the data file publicly and is view-only.</p>
-  <div class="row"><button class="btn pri" onclick="saveSettings()">Save &amp; reload</button><button class="btn" onclick="localStorage.removeItem('mt_meta');enriching=false;load()">Refresh posters</button></div></div>`;
+  <div class="row"><button class="btn pri" onclick="saveSettings()">Save &amp; reload</button><button class="btn" onclick="localStorage.removeItem('mt_meta');META={};enriching=false;load()">Refresh posters</button></div></div>`;
 }
 function saveSettings(){
   for(const k of ['repo','path','branch','token','tmdb','omdb'])cfg[k]=$('#s_'+k).value.trim();
@@ -376,7 +385,7 @@ async function saveForm(){
 }
 async function del(k){
   const e=state.entries.find(x=>key(x)===k);
-  if(!e||!confirm(`Delete "${e.title}" (${e.dateWatched})?`))return;
+  if(!e||!confirm(`Delete "${e.title}" (${fmtD(e.dateWatched)})?`))return;
   try{
     await mutate(arr=>{const i=arr.findIndex(x=>key(x)===k);if(i>=0)arr.splice(i,1)},`remove: ${e.title} (${e.dateWatched})`);
     load();
