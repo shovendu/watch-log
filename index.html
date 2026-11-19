@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Watch Log</title>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--line:#2a2f3a;--tx:#e8eaf0;--mut:#8b93a5;--acc:#e5a00d;--bar:#e5a00d;--ok:#3fb27f;--bad:#e5534b}
+@media(prefers-color-scheme:light){:root{--bg:#f5f6f8;--card:#fff;--line:#dfe2e8;--tx:#1b1e26;--mut:#6a7285;--acc:#b97800;--bar:#d89200}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+header h1{font-size:18px;margin:0 8px 0 0}
+nav{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+nav button,.btn{background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;font:inherit}
+nav button.on{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
+.btn.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
+.btn.sm{padding:3px 8px;font-size:13px}
+.btn.del{color:var(--bad)}
+main{max-width:1050px;margin:0 auto;padding:14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.card .v{font-size:24px;font-weight:700}
+.card .l{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+input,select,textarea{background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:inherit;max-width:100%}
+textarea{width:100%}
+.chart{display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:8px}
+.chart div.b{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.chart i{display:block;width:100%;background:var(--bar);border-radius:3px 3px 0 0;min-height:1px}
+.chart small{color:var(--mut);font-size:10px;margin-top:3px}
+h2{font-size:15px;margin:18px 0 6px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mut);font-size:12px;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+.wrap{overflow-x:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.title{display:flex;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+.title img,.ph{width:64px;height:96px;object-fit:cover;border-radius:6px;background:var(--line);flex:none}
+.title h3{margin:0 0 2px;font-size:15px}
+.mut{color:var(--mut);font-size:13px}
+.tag{display:inline-block;padding:1px 7px;border-radius:99px;font-size:12px;border:1px solid var(--line);color:var(--mut);margin-right:4px}
+.tag.Finished{color:var(--ok)}.tag.Dropped{color:var(--bad)}.tag.Watching{color:var(--acc)}
+details summary{cursor:pointer;color:var(--acc);font-size:13px;margin-top:4px}
+dialog{background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(460px,94vw)}
+dialog::backdrop{background:#0008}
+.f{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.f label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:2px}
+.f .full{grid-column:1/-1}
+.th{width:32px;height:48px;object-fit:cover;border-radius:4px;display:block}
+.gb{display:flex;align-items:center;gap:8px;margin:5px 0}
+.gb .n{width:120px;font-size:13px;flex:none}
+.gb .t{flex:1}
+.gb i{display:block;height:10px;background:var(--bar);border-radius:3px}
+.msg{padding:8px 12px;border-radius:8px;margin:8px 0;background:var(--card);border:1px solid var(--line)}
+.msg.err{border-color:var(--bad);color:var(--bad)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎬 Watch Log</h1>
+  <nav id="tabs"></nav>
+  <button class="btn pri" onclick="openForm()">+ Add</button>
+</header>
+<main>
+  <div id="msg"></div>
+  <div id="main"></div>
+</main>
+
+<dialog id="dlg">
+  <form method="dialog" id="frm" onsubmit="return false">
+    <h3 id="dlgTitle" style="margin-top:0">Add entry</h3>
+    <div class="f">
+      <label class="full">Title<input id="f_title" required></label>
+      <label>Date watched<input id="f_date" type="date" required></label>
+      <label>Type<select id="f_type"><option>Movie</option><option>Series</option><option>Documentary</option><option>Other</option></select></label>
+      <label>Season<input id="f_season" type="number" min="0"></label>
+      <label>Episode<input id="f_episode" type="number" min="0"></label>
+      <label>Status<select id="f_status"><option>Finished</option><option>Watching</option><option>Plan to watch</option><option>Dropped</option></select></label>
+      <label>Rating (1-10)<input id="f_rating" type="number" min="1" max="10" step="0.5"></label>
+      <label>Minutes watched<input id="f_dur" type="number" min="0"></label>
+      <label class="full">Note<textarea id="f_note" rows="2"></textarea></label>
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:12px">
+      <button type="button" class="btn" onclick="lookup()">Auto-fill runtime</button>
+      <span><button type="button" class="btn" onclick="$('#dlg').close()">Cancel</button>
+      <button type="button" class="btn pri" onclick="saveForm()">Save</button></span>
+    </div>
+    <div id="fmsg" class="mut"></div>
+  </form>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
+const SS=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const today=()=>new Date().toLocaleDateString('en-CA');
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function guessRepo(){
+  if(!location.hostname.endsWith('github.io'))return '';
+  const o=location.hostname.split('.')[0],r=location.pathname.split('/')[1];
+  return o&&r?o+'/'+r:'';
+}
+let cfg=Object.assign({repo:guessRepo(),branch:'',path:'watch-log.json',token:'',tmdb:'',omdb:''},LS('mt_cfg',{}));
+let state={entries:[],tab:'dash',mode:'month',p:'',sort:{k:'dateWatched',d:-1},q:'',ft:'',fs:'',fg:'',editKey:null};
+
+/* ---------- GitHub sync ---------- */
+const gh=(method,body)=>fetch(`https://api.github.com/repos/${cfg.repo}/contents/${cfg.path}${method==='GET'&&cfg.branch?'?ref='+encodeURIComponent(cfg.branch):''}`,
+  {method,headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json'},body:body&&JSON.stringify(body)});
+const b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,'')),c=>c.charCodeAt(0)));
+const b64e=s=>{let r='';new TextEncoder().encode(s).forEach(x=>r+=String.fromCharCode(x));return btoa(r)};
+
+async function fetchRemote(){
+  if(cfg.repo&&cfg.token){
+    const r=await gh('GET');
+    if(!r.ok)throw new Error('GitHub error '+r.status+(r.status===404?' (check repo/path/token)':''));
+    const j=await r.json();
+    return {data:JSON.parse(b64d(j.content)),sha:j.sha};
+  }
+  const file=location.search.includes('demo')?'sample-watch-log.json':cfg.path;
+  const r=await fetch(file+'?t='+Date.now());
+  if(!r.ok)throw new Error('Could not load '+file);
+  return {data:await r.json(),sha:null};
+}
+const key=e=>[e.dateWatched,e.title,e.type,e.season,e.episode,e.status,e.rating,e.durationMinutes,e.note].map(x=>x??'').join('|');
+
+async function mutate(fn,message){
+  if(!cfg.token||!cfg.repo)throw new Error('Add repo + GitHub token in Settings to edit.');
+  for(let i=0;i<3;i++){
+    const {data,sha}=await fetchRemote();
+    data.entries=data.entries||[];
+    fn(data.entries);
+    const r=await gh('PUT',{message,content:b64e(JSON.stringify(data,null,2)+'\n'),sha,...(cfg.branch&&{branch:cfg.branch})});
+    if(r.ok)return;
+    if(r.status!==409&&r.status!==422)throw new Error('GitHub error '+r.status);
+  }
+  throw new Error('Write conflict, please try again.');
+}
+
+async function load(){
+  try{
+    const {data}=await fetchRemote();
+    state.entries=(data.entries||[]).filter(e=>e&&e.title&&e.dateWatched);
+    $('#msg').innerHTML='';
+  }catch(e){
+    $('#msg').innerHTML=`<div class="msg err">${esc(e.message)}. Open Settings to configure.</div>`;
+  }
+  render();enrich();
+}
+
+/* ---------- stats ---------- */
+const mins=e=>+e.durationMinutes||0;
+const hrs=es=>es.reduce((a,e)=>a+mins(e),0)/60;
+const isEp=e=>e.type==='Series'&&e.episode!=null;
+const fmtH=h=>h.toFixed(h<10?1:0)+' h';
+function groups(){
+  const m=new Map();
+  for(const e of state.entries){
+    const k=e.title.trim().toLowerCase();
+    if(!m.has(k))m.set(k,{k,title:e.title.trim(),list:[]});
+    m.get(k).list.push(e);
+  }
+  return [...m.values()].map(g=>{
+    g.list.sort((a,b)=>b.dateWatched.localeCompare(a.dateWatched)||(b.season??0)-(a.season??0)||(b.episode??0)-(a.episode??0));
+    const l=g.list[0];
+    g.last=l;g.type=l.type;g.status=l.status;
+    g.hours=hrs(g.list);
+    g.episodes=g.list.filter(isEp).length;
+    const r=g.list.filter(e=>e.rating!=null).map(e=>+e.rating);
+    g.avg=r.length?r.reduce((a,b)=>a+b,0)/r.length:null;
+    return g;
+  }).sort((a,b)=>b.last.dateWatched.localeCompare(a.last.dateWatched));
+}
+const se=e=>e.season!=null||e.episode!=null?`S${e.season??'?'}E${e.episode??'?'}`:'';
+
+/* ---------- metadata (poster, year, IMDb) cached per device ---------- */
+let enriching=false;
+const metaOf=t=>(LS('mt_meta',{}))[t.trim().toLowerCase()]||{};
+const genresOf=t=>(metaOf(t).genre||'').split(',').map(s=>s.trim()).filter(Boolean);
+const TG={28:'Action',12:'Adventure',16:'Animation',35:'Comedy',80:'Crime',99:'Documentary',18:'Drama',10751:'Family',14:'Fantasy',36:'History',27:'Horror',10402:'Music',9648:'Mystery',10749:'Romance',878:'Sci-Fi',10770:'TV Movie',53:'Thriller',10752:'War',37:'Western',10759:'Action & Adventure',10762:'Kids',10763:'News',10764:'Reality',10765:'Sci-Fi & Fantasy',10766:'Soap',10767:'Talk',10768:'War & Politics'};
+async function enrich(){
+  if(!cfg.tmdb||enriching)return;
+  enriching=true;
+  const meta=LS('mt_meta',{});let n=0;
+  for(const g of groups()){
+    if(meta[g.k]&&(meta[g.k].genre!==undefined||meta[g.k].miss))continue;
+    try{
+      const r=await (await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${cfg.tmdb}&query=${encodeURIComponent(g.title)}`)).json();
+      const res=(r.results||[]).filter(x=>x.media_type!=='person');
+      const want=g.type==='Series'?'tv':g.type==='Movie'?'movie':null;
+      const h=res.find(x=>x.media_type===want)||res[0];
+      if(!h){meta[g.k]={miss:1};continue}
+      const year=(h.release_date||h.first_air_date||'').slice(0,4);
+      let imdb=null,genre=(h.genre_ids||[]).map(i=>TG[i]).filter(Boolean).join(', ');
+      if(cfg.omdb){
+        try{const o=await (await fetch(`https://www.omdbapi.com/?apikey=${cfg.omdb}&t=${encodeURIComponent(h.title||h.name)}${year?'&y='+year:''}`)).json();
+          if(o.imdbRating&&o.imdbRating!=='N/A')imdb=o.imdbRating;
+          if(o.Genre&&o.Genre!=='N/A')genre=o.Genre}catch{}
+      }
+      meta[g.k]={poster:h.poster_path?'https://image.tmdb.org/t/p/w185'+h.poster_path:null,year,imdb,genre};
+      if(++n%4===0){SS('mt_meta',meta);render()}
+    }catch{break}
+  }
+  SS('mt_meta',meta);enriching=false;if(n)render();
+}
+
+/* ---------- views ---------- */
+const TABS=[['dash','Dashboard'],['log','Log'],['titles','Titles'],['set','Settings']];
+function render(){
+  $('#tabs').innerHTML=TABS.map(([k,l])=>`<button class="${state.tab===k?'on':''}" onclick="state.tab='${k}';render()">${l}</button>`).join('');
+  $('#main').innerHTML={dash,log:logView,titles:titlesView,set:settings}[state.tab]();
+}
+
+function dash(){
+  const per=state.mode==='year'?4:7;
+  const periods=[...new Set([today().slice(0,per),...state.entries.map(e=>e.dateWatched.slice(0,per))])].sort().reverse();
+  if(state.p.length!==per||!periods.includes(state.p))state.p=periods[0];
+  const es=state.entries.filter(e=>e.dateWatched.startsWith(state.p));
+  const rated=es.filter(e=>e.rating!=null);
+  const avg=rated.length?(rated.reduce((a,e)=>a+ +e.rating,0)/rated.length).toFixed(1):'–';
+  const titles=new Set(es.map(e=>e.title.trim().toLowerCase())).size;
+
+  let buckets=[];
+  if(state.mode==='year'){
+    buckets=MON.map((m,i)=>({l:m,v:hrs(es.filter(e=>e.dateWatched.slice(5,7)===String(i+1).padStart(2,'0')))}));
+  }else{
+    const [y,m]=state.p.split('-').map(Number),n=new Date(y,m,0).getDate();
+    buckets=Array.from({length:n},(_,i)=>({l:i+1,v:hrs(es.filter(e=>+e.dateWatched.slice(8,10)===i+1))}));
+  }
+  const max=Math.max(...buckets.map(b=>b.v),.01);
+  const chart=buckets.map(b=>`<div class="b" title="${b.l}: ${b.v.toFixed(1)} h"><i style="height:${b.v/max*100}%"></i><small>${b.l}</small></div>`).join('');
+
+  const byTitle=new Map();
+  es.forEach(e=>{const k=e.title.trim();byTitle.set(k,(byTitle.get(k)||0)+mins(e))});
+  const top=[...byTitle].sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const cont=groups().filter(g=>g.status==='Watching').slice(0,6);
+  const all=state.entries;
+  const gm=new Map();
+  es.forEach(e=>{const gs=genresOf(e.title);gs.forEach(g=>gm.set(g,(gm.get(g)||0)+mins(e)/60/gs.length))});
+  const gtop=[...gm].sort((a,b)=>b[1]-a[1]).slice(0,8),gmax=gtop.length?gtop[0][1]||1:1;
+  const genreHtml=gtop.length?gtop.map(([g,h])=>`<div class="gb"><span class="n">${esc(g)}</span><span class="t"><i style="width:${Math.max(h/gmax*100,1)}%"></i></span><span class="mut">${h.toFixed(1)} h</span></div>`).join('')
+    :`<span class="mut">${cfg.tmdb?'Genres will appear once titles are fetched.':'Add a TMDB key in Settings to see genres.'}</span>`;
+
+  return `
+  <div class="row">
+    <select onchange="state.mode=this.value;render()"><option value="month" ${state.mode==='month'?'selected':''}>Monthly</option><option value="year" ${state.mode==='year'?'selected':''}>Yearly</option></select>
+    <select onchange="state.p=this.value;render()">${periods.map(p=>`<option ${p===state.p?'selected':''}>${p}</option>`).join('')}</select>
+    <span class="mut">All time: ${fmtH(hrs(all))} · ${all.filter(e=>e.type==='Movie').length} movies · ${all.filter(isEp).length} episodes</span>
+  </div>
+  <div class="cards">
+    <div class="card"><div class="v">${fmtH(hrs(es))}</div><div class="l">Watch time</div></div>
+    <div class="card"><div class="v">${es.filter(e=>e.type==='Movie').length}</div><div class="l">Movies</div></div>
+    <div class="card"><div class="v">${es.filter(isEp).length}</div><div class="l">Episodes</div></div>
+    <div class="card"><div class="v">${titles}</div><div class="l">Titles</div></div>
+    <div class="card"><div class="v">${avg}</div><div class="l">Avg rating</div></div>
+  </div>
+  <h2>${state.mode==='year'?'Hours per month':'Hours per day'}</h2>
+  <div class="card"><div class="chart">${chart}</div></div>
+  <h2>Watch time by genre</h2>
+  <div class="card">${genreHtml}</div>
+  <div class="grid" style="margin-top:6px">
+    <div><h2>Most watched</h2><div class="card">${top.length?top.map(([t,m])=>`<div class="row" style="justify-content:space-between;margin:3px 0"><span>${esc(t)}</span><span class="mut">${(m/60).toFixed(1)} h</span></div>`).join(''):'<span class="mut">Nothing logged.</span>'}</div></div>
+    <div><h2>Continue watching</h2><div class="card">${cont.length?cont.map(g=>`<div class="row" style="justify-content:space-between;margin:3px 0"><span>${esc(g.title)}</span><span class="mut">${se(g.last)} · ${g.last.dateWatched}</span></div>`).join(''):'<span class="mut">No series in progress.</span>'}</div></div>
+  </div>`;
+}
+
+function logView(){
+  const {k,d}=state.sort,q=state.q.toLowerCase();
+  let es=state.entries.filter(e=>(!q||(e.title+' '+(e.note||'')).toLowerCase().includes(q))&&(!state.ft||e.type===state.ft)&&(!state.fs||e.status===state.fs)&&(!state.fg||genresOf(e.title).includes(state.fg)));
+  es=[...es].sort((a,b)=>{const x=a[k]??'',y=b[k]??'';return (x>y?1:x<y?-1:0)*d});
+  const th=(l,kk)=>`<th onclick="state.sort={k:'${kk}',d:state.sort.k==='${kk}'?-state.sort.d:1};render()">${l}${state.sort.k===kk?(state.sort.d>0?' ▲':' ▼'):''}</th>`;
+  const opt=(arr,v,l)=>`<option value="">${l}</option>`+arr.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('');
+  const allGenres=[...new Set(state.entries.flatMap(e=>genresOf(e.title)))].sort();
+  const canEdit=cfg.token&&cfg.repo;
+  return `
+  <div class="row">
+    <input placeholder="Search title / note" value="${esc(state.q)}" onchange="state.q=this.value;render()">
+    <select onchange="state.ft=this.value;render()">${opt(['Movie','Series','Documentary','Other'],state.ft,'All types')}</select>
+    <select onchange="state.fs=this.value;render()">${opt(['Watching','Finished','Plan to watch','Dropped'],state.fs,'All status')}</select>
+    <select onchange="state.fg=this.value;render()">${opt(allGenres,state.fg,'All genres')}</select>
+    <span class="mut">${es.length} entries · ${fmtH(hrs(es))}</span>
+  </div>
+  <div class="wrap"><table><thead><tr><th></th>${th('Date','dateWatched')}${th('Title','title')}${th('Type','type')}<th>S/E</th>${th('Status','status')}${th('My','rating')}<th>IMDb</th><th>Genre</th>${th('Min','durationMinutes')}<th>Note</th>${canEdit?'<th></th>':''}</tr></thead><tbody>
+  ${es.map(e=>{const m=metaOf(e.title);return `<tr><td>${m.poster?`<img class="th" src="${m.poster}" alt="" loading="lazy">`:''}</td><td>${esc(e.dateWatched)}</td><td>${esc(e.title)}</td><td>${esc(e.type)}</td><td>${se(e)}</td><td><span class="tag ${esc(e.status)}">${esc(e.status)}</span></td><td>${e.rating??''}</td><td>${m.imdb||''}</td><td>${esc(m.genre)}</td><td>${e.durationMinutes??''}</td><td>${esc(e.note)}</td>${canEdit?`<td style="white-space:nowrap"><button class="btn sm" onclick="openForm('${esc(key(e).replace(/'/g,"\\'"))}')">Edit</button> <button class="btn sm del" onclick="del('${esc(key(e).replace(/'/g,"\\'"))}')">✕</button></td>`:''}</tr>`}).join('')}
+  </tbody></table></div>`;
+}
+
+function titlesView(){
+  const gs=groups();
+  if(!gs.length)return '<p class="mut">No entries yet.</p>';
+  return `<div class="grid">${gs.map(g=>{
+    const m=metaOf(g.title);
+    const rew=g.type==='Movie'&&g.list.length>1?` · rewatched ${g.list.length-1}×`:'';
+    return `<div class="title">
+      ${m.poster?`<img src="${m.poster}" alt="" loading="lazy">`:'<div class="ph"></div>'}
+      <div style="min-width:0">
+        <h3>${esc(g.title)} ${m.year?`<span class="mut">(${m.year})</span>`:''}</h3>
+        <div><span class="tag">${esc(g.type)}</span><span class="tag ${esc(g.status)}">${esc(g.status)}</span>${m.imdb?`<span class="tag">IMDb ${m.imdb}</span>`:''}</div>
+        ${m.genre?`<div class="mut">${esc(m.genre)}</div>`:''}
+        <div class="mut">Last: ${g.last.dateWatched}${se(g.last)?' · '+se(g.last):''}${rew}</div>
+        <div class="mut">${fmtH(g.hours)}${g.episodes?` · ${g.episodes} eps`:''}${g.avg!=null?` · my ${g.avg.toFixed(1)}/10`:''}</div>
+        <details><summary>${g.list.length} entr${g.list.length>1?'ies':'y'}</summary>
+          ${g.list.map(e=>`<div class="mut">${e.dateWatched} ${se(e)} ${e.rating!=null?'★'+e.rating:''} ${esc(e.note)}</div>`).join('')}
+        </details>
+      </div></div>`}).join('')}</div>`;
+}
+
+function settings(){
+  const f=(id,l,v,t='text')=>`<label class="full">${l}<input id="s_${id}" type="${t}" value="${esc(v)}" autocomplete="off"></label>`;
+  return `<div class="card" style="max-width:520px"><div class="f">
+    ${f('repo','GitHub repo (owner/name)',cfg.repo)}
+    ${f('path','Data file path',cfg.path)}
+    ${f('branch','Branch (blank = default)',cfg.branch)}
+    ${f('token','GitHub token (needed to add/edit here; Contents read/write)',cfg.token,'password')}
+    ${f('tmdb','TMDB API key (posters, year, runtime)',cfg.tmdb,'password')}
+    ${f('omdb','OMDb API key (IMDb rating)',cfg.omdb,'password')}
+  </div>
+  <p class="mut">Saved only in this browser. Set them once on each device. Without a token the site reads the data file publicly and is view-only.</p>
+  <div class="row"><button class="btn pri" onclick="saveSettings()">Save &amp; reload</button><button class="btn" onclick="localStorage.removeItem('mt_meta');enriching=false;load()">Refresh posters</button></div></div>`;
+}
+function saveSettings(){
+  for(const k of ['repo','path','branch','token','tmdb','omdb'])cfg[k]=$('#s_'+k).value.trim();
+  if(!cfg.path)cfg.path='watch-log.json';
+  SS('mt_cfg',cfg);state.tab='dash';load();
+}
+
+/* ---------- add / edit / delete ---------- */
+const num=v=>v===''||v==null?null:+v;
+function openForm(k){
+  state.editKey=k||null;
+  const e=k?state.entries.find(x=>key(x)===k):null;
+  $('#dlgTitle').textContent=e?'Edit entry':'Add entry';
+  $('#f_title').value=e?.title||'';
+  $('#f_date').value=e?.dateWatched||today();
+  $('#f_type').value=e?.type||'Movie';
+  $('#f_season').value=e?.season??'';
+  $('#f_episode').value=e?.episode??'';
+  $('#f_status').value=e?.status||'Finished';
+  $('#f_rating').value=e?.rating??'';
+  $('#f_dur').value=e?.durationMinutes??'';
+  $('#f_note').value=e?.note||'';
+  $('#fmsg').textContent='';
+  $('#dlg').showModal();
+}
+async function lookup(){
+  if(!cfg.tmdb){$('#fmsg').textContent='Add a TMDB key in Settings first.';return}
+  const t=$('#f_title').value.trim();if(!t)return;
+  $('#fmsg').textContent='Looking up…';
+  try{
+    const r=await (await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${cfg.tmdb}&query=${encodeURIComponent(t)}`)).json();
+    const h=(r.results||[]).find(x=>x.media_type!=='person');
+    if(!h){$('#fmsg').textContent='No match found.';return}
+    let rt=null;
+    if(h.media_type==='movie'){rt=(await (await fetch(`https://api.themoviedb.org/3/movie/${h.id}?api_key=${cfg.tmdb}`)).json()).runtime}
+    else{const d=await (await fetch(`https://api.themoviedb.org/3/tv/${h.id}?api_key=${cfg.tmdb}`)).json();rt=(d.episode_run_time||[])[0]||d.last_episode_to_air?.runtime}
+    $('#f_type').value=h.media_type==='movie'?'Movie':'Series';
+    if(rt)$('#f_dur').value=rt;
+    $('#fmsg').textContent=`${h.title||h.name} (${(h.release_date||h.first_air_date||'').slice(0,4)}) · ${rt?rt+' min':'runtime unknown'}`;
+  }catch{$('#fmsg').textContent='Lookup failed.'}
+}
+async function saveForm(){
+  const e={dateWatched:$('#f_date').value,title:$('#f_title').value.trim(),type:$('#f_type').value,
+    season:num($('#f_season').value),episode:num($('#f_episode').value),status:$('#f_status').value,
+    rating:num($('#f_rating').value),durationMinutes:num($('#f_dur').value),note:$('#f_note').value.trim()||null};
+  if(!e.title||!e.dateWatched){$('#fmsg').textContent='Title and date are required.';return}
+  $('#fmsg').textContent='Saving…';
+  const ek=state.editKey;
+  try{
+    await mutate(arr=>{
+      if(ek){const i=arr.findIndex(x=>key(x)===ek);if(i>=0)arr[i]=e;else arr.push(e)}else arr.push(e);
+    },`log: ${e.title} (${e.dateWatched})`);
+    $('#dlg').close();load();
+  }catch(err){$('#fmsg').textContent=err.message}
+}
+async function del(k){
+  const e=state.entries.find(x=>key(x)===k);
+  if(!e||!confirm(`Delete "${e.title}" (${e.dateWatched})?`))return;
+  try{
+    await mutate(arr=>{const i=arr.findIndex(x=>key(x)===k);if(i>=0)arr.splice(i,1)},`remove: ${e.title} (${e.dateWatched})`);
+    load();
+  }catch(err){$('#msg').innerHTML=`<div class="msg err">${esc(err.message)}</div>`}
+}
+
+load();
+</script>
+</body>
+</html>

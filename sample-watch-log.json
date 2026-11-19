@@ -1,0 +1,11 @@
+{
+  "tracker": "watch-log",
+  "owner": "Suvendu",
+  "entries": [
+    {"dateWatched":"2026-11-02","title":"Inception","type":"Movie","season":null,"episode":null,"status":"Finished","rating":9,"durationMinutes":148,"note":"Rewatch, still great"},
+    {"dateWatched":"2026-11-05","title":"Breaking Bad","type":"Series","season":2,"episode":5,"status":"Watching","rating":null,"durationMinutes":47,"note":null},
+    {"dateWatched":"2026-11-06","title":"Breaking Bad","type":"Series","season":2,"episode":6,"status":"Watching","rating":8.5,"durationMinutes":47,"note":"Suggest to Rafi"},
+    {"dateWatched":"2026-10-20","title":"Planet Earth II","type":"Documentary","season":null,"episode":null,"status":"Finished","rating":9,"durationMinutes":60,"note":null},
+    {"dateWatched":"2026-10-11","title":"Parasite","type":"Movie","season":null,"episode":null,"status":"Finished","rating":8,"durationMinutes":132,"note":null}
+  ]
+}
