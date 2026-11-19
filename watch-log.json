@@ -1,5 +1,17 @@
 {
   "tracker": "watch-log",
   "owner": "Suvendu",
-  "entries": []
+  "entries": [
+    {
+      "dateWatched": "2026-11-17",
+      "title": "The Odyssey",
+      "type": "Movie",
+      "season": null,
+      "episode": null,
+      "status": "Finished",
+      "rating": null,
+      "durationMinutes": 172,
+      "note": null
+    }
+  ]
 }
