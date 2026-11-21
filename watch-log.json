@@ -474,6 +474,50 @@
       "rating": null,
       "durationMinutes": null,
       "note": null
+    },
+    {
+      "dateWatched": "2026-11-21",
+      "title": "3 Body Problem",
+      "type": "Series",
+      "season": 2,
+      "episode": null,
+      "status": "Plan to watch",
+      "rating": null,
+      "durationMinutes": null,
+      "note": "Not yet released"
+    },
+    {
+      "dateWatched": "2026-11-21",
+      "title": "3 Body Problem",
+      "type": "Series",
+      "season": 3,
+      "episode": null,
+      "status": "Plan to watch",
+      "rating": null,
+      "durationMinutes": null,
+      "note": "Not yet released"
+    },
+    {
+      "dateWatched": "2026-11-21",
+      "title": "3 Body Problem",
+      "type": "Series",
+      "season": 4,
+      "episode": null,
+      "status": "Plan to watch",
+      "rating": null,
+      "durationMinutes": null,
+      "note": "Not yet released"
+    },
+    {
+      "dateWatched": "2026-11-21",
+      "title": "3 Body Problem",
+      "type": "Series",
+      "season": 5,
+      "episode": null,
+      "status": "Plan to watch",
+      "rating": null,
+      "durationMinutes": null,
+      "note": "Not yet released"
     }
   ]
 }
